@@ -1,0 +1,46 @@
+# Компилированные бинарники
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+
+# Файлы сборки
+build/
+bin/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.make
+
+# IDE / редакторы
+# CLion
+.idea/
+*.iml
+# Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+*.user
+# VSCode
+.vscode/
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+# MacOS
+.DS_Store
+
+# Linux
+*~
