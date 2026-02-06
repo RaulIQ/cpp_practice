@@ -6,90 +6,10 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <ping_pong_handler.h>
+#include <thread_client_session.h>
 
 constexpr const char *SOCKET_PATH = "/tmp/pingpong.sock";
-
-class MessageHandler
-{
-public:
-    explicit MessageHandler(int client_fd) : client_fd(client_fd) {}
-
-    virtual ~MessageHandler() = default;
-
-    virtual void on_message(std::string_view msg) = 0;
-
-    void on_disconnect()
-    {
-        std::println("Client disconnected, fd = {}", client_fd);
-    }
-
-    void on_connect()
-    {
-        std::println("Client connect, fd = {}", client_fd);
-    }
-
-protected:
-    int client_fd;
-};
-
-class PingPongHandler : public MessageHandler
-{
-public:
-    explicit PingPongHandler(int client_fd) : MessageHandler(client_fd) {}
-    void on_message(std::string_view msg) override
-    {
-        if (msg.starts_with("ping"))
-            write(client_fd, "pong\n", 5);
-        else
-            write(client_fd, "unknown\n", 8);
-    }
-};
-
-class ClientSession
-{
-public:
-    explicit ClientSession(int client_fd) : _client_fd(client_fd), _handler(client_fd)
-    {
-    }
-
-    void start()
-    {
-        _handler.on_connect();
-        _thread = std::thread(&ClientSession::_handle_client, this);
-    }
-
-    ~ClientSession()
-    {
-        if (_thread.joinable())
-        {
-            _thread.join();
-        }
-    }
-
-private:
-    int _client_fd;
-    PingPongHandler _handler;
-    std::thread _thread;
-
-    void _handle_client()
-    {
-        char buffer[128];
-
-        while (true)
-        {
-            ssize_t n = read(_client_fd, buffer, sizeof(buffer) - 1);
-            if (n <= 0)
-                break;
-
-            buffer[n] = '\0';
-
-            _handler.on_message(std::string_view(buffer, n));
-        }
-
-        close(_client_fd);
-        _handler.on_disconnect();
-    }
-};
 
 int main()
 {
@@ -121,7 +41,7 @@ int main()
 
     std::println(SOCKET_PATH);
 
-    std::vector<std::unique_ptr<ClientSession>> sessions;
+    std::vector<std::unique_ptr<ThreadClientSession>> sessions;
 
     while (true)
     {
@@ -132,7 +52,7 @@ int main()
             continue;
         }
 
-        auto session = std::make_unique<ClientSession>(client_fd);
+        auto session = std::make_unique<ThreadClientSession>(client_fd);
         session->start();
         sessions.push_back(std::move(session));
     }

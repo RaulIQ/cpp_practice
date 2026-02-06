@@ -1,4 +1,3 @@
-# meson.build
 project('pingpong', 'cpp',
   version: '0.1.0',
   default_options: [
@@ -8,10 +7,16 @@ project('pingpong', 'cpp',
   ]
 )
 
-# Источники
-sources = files('src/main.cpp')
+inc = include_directories('include')
 
-# Исполняемый файл
-executable('main', sources,
-  install: false  # не устанавливать системно
+sources = files(
+  'src/main.cpp',
+  'src/thread_client_session.cpp',
+  'src/ping_pong_handler.cpp'
+)
+
+executable('main',
+  sources,
+  include_directories: inc,
+  install: false
 )
