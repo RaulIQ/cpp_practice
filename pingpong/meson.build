@@ -7,6 +7,8 @@ project('pingpong', 'cpp',
   ]
 )
 
+dependency_json = dependency('nlohmann_json', required: true)
+
 inc = include_directories('include')
 
 sources = files(
@@ -18,5 +20,6 @@ sources = files(
 executable('main',
   sources,
   include_directories: inc,
+  dependencies: [dependency_json],
   install: false
 )

@@ -6,10 +6,16 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <ping_pong_handler.h>
-#include <thread_client_session.h>
+#include <ping_pong_handler.hpp>
+#include <thread_client_session.hpp>
+#include <fstream>
+#include "config_manager.hpp"
+
+#include <nlohmann/json.hpp>
+
 
 constexpr const char *SOCKET_PATH = "/tmp/pingpong.sock";
+
 
 int main()
 {
@@ -43,6 +49,8 @@ int main()
 
     std::vector<std::unique_ptr<ThreadClientSession>> sessions;
 
+    auto cong_mgr = ConfigManager();
+
     while (true)
     {
         int client_fd = accept(server_fd, nullptr, nullptr);
@@ -52,7 +60,7 @@ int main()
             continue;
         }
 
-        auto session = std::make_unique<ThreadClientSession>(client_fd);
+        auto session = std::make_unique<ThreadClientSession>(client_fd, cong_mgr);
         session->start();
         sessions.push_back(std::move(session));
     }

@@ -1,6 +1,8 @@
-#include "thread_client_session.h"
+#include "thread_client_session.hpp"
+#include "config_manager.hpp"
 
-ThreadClientSession::ThreadClientSession(int client_fd) : _client_fd(client_fd), _handler(client_fd) {};
+
+ThreadClientSession::ThreadClientSession(int client_fd, ConfigManager &conf_mgr) : _client_fd(client_fd), conf_mgr(conf_mgr), _handler(client_fd, conf_mgr ) {};
 
 void ThreadClientSession::start()
 {

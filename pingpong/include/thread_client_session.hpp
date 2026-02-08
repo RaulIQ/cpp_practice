@@ -1,12 +1,17 @@
 #pragma once
 
-#include "ping_pong_handler.h"
+#include "ping_pong_handler.hpp"
 #include <thread>
 
 class ThreadClientSession
 {
 public:
-    explicit ThreadClientSession(int client_fd);
+    explicit ThreadClientSession(int client_fd, ConfigManager &conf_mgr);
+
+    ConfigManager &conf_mgr;
+
+    ThreadClientSession(int client_fd);
+
     void start();
 
     ~ThreadClientSession();
