@@ -13,9 +13,7 @@
 
 #include <nlohmann/json.hpp>
 
-
 constexpr const char *SOCKET_PATH = "/tmp/pingpong.sock";
-
 
 int main()
 {
