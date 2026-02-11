@@ -2,32 +2,26 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 1. Загрузка данных
-with open('spectrum.json') as f:
+with open("spectrogram.json") as f:
     data = json.load(f)
 
-# Essentia Spectrum возвращает N/2 + 1 элементов
-amplitude = np.array(data['spectrum'])
-sr = data['metadata']['sampleRate']
-print(sr)
-n_fft = data['metadata']['frameSize']
+S = np.array(data["spectrogram"])  # shape (num_frames, num_bins)
 
-# 2. Перевод в децибелы (аналог librosa.amplitude_to_db)
-# Избегаем логарифма нуля, добавляя маленькое число (1e-10)
-amplitude_db = 20 * np.log10(amplitude / np.max(amplitude) + 1e-10)
+# Получаем метаданные
+frameSize = 4096
+hopSize   = 256
+sampleRate = 44100
 
-# 3. Расчет частотной сетки (аналог librosa.fft_frequencies)
-frequencies = np.linspace(0, sr / 2, len(amplitude))
+num_frames, num_bins = S.shape
 
-# 4. Отрисовка
-plt.figure(figsize=(12, 5))
-plt.plot(frequencies, amplitude_db)
-plt.xscale('log') # Логарифмическая шкала как в вашем примере
-plt.grid(True, which="both", ls="-", alpha=0.5)
+# Оси в реальных единицах
+times = np.arange(num_frames) * hopSize / sampleRate  # в секундах
+freqs = np.arange(num_bins) * sampleRate / frameSize  # в Гц
 
-plt.title("Amplitude Spectrum (from Essentia C++)")
-plt.xlabel("Frequency (Hz)")
-plt.ylabel("Amplitude (dB)")
-plt.xlim(20, sr / 2) # Ограничим слышимым диапазоном
-plt.ylim(-80, 5)     # Типичный диапазон для дБ
+plt.figure(figsize=(12, 6))
+plt.imshow(S.T, origin="lower", aspect="auto",
+           extent=[times[0], times[-1], freqs[0], freqs[-1]])
+plt.xlabel("Time (s)")
+plt.ylabel("Frequency (Hz)")
+plt.colorbar(label="Amplitude (dB)")
 plt.show()

@@ -12,57 +12,98 @@ int main() {
     essentia::init();
 
     string filename = "audio.wav";
-    float targetSR = 44100.0; // Возьмем стандартную частоту для спектра
-    int frameSize = 4096;
+    float sampleRate = 44100.0;
+
+    int frameSize = 4096;   // как в librosa по умолчанию
+    int hopSize   = 256;    // как в librosa по умолчанию
 
     AlgorithmFactory& factory = AlgorithmFactory::instance();
 
-    // 1. Загрузка аудио
-    Algorithm* loader = factory.create("MonoLoader", "filename", filename, "sampleRate", targetSR);
-    vector<float> audio;
+    // ===== 1. Загрузка аудио =====
+    Algorithm* loader = factory.create("MonoLoader",
+                                       "filename", filename,
+                                       "sampleRate", sampleRate);
+
+    vector<Real> audio;
     loader->output("audio").set(audio);
     loader->compute();
 
-    // 2. Берем только первые 4096 сэмплов (как в вашем примере dft_input = array[:4096])
-    vector<float> frame;
-    frame.assign(audio.begin(), audio.begin() + frameSize);
 
-    // ===== 1. Окно Хэннинга =====
-    Algorithm* win = factory.create("Windowing", 
-                                    "type", "hann",
-                                    "size", frameSize);
+    // ===== 2. Алгоритмы для STFT =====
+    Algorithm* frameCutter = factory.create("FrameCutter",
+                                            "frameSize", frameSize,
+                                            "hopSize", hopSize);
 
-    vector<float> windowedFrame;
-    win->input("frame").set(frame);
-    win->output("frame").set(windowedFrame);
-    win->compute();
+    Algorithm* windowing = factory.create("Windowing",
+                                          "type", "hann");
 
-    // ===== 2. FFT =====
+    Algorithm* spectrum = factory.create("Spectrum",
+                                         "size", frameSize);
 
-    Algorithm* spec = factory.create("Spectrum", "size", frameSize);
+    // ===== 3. Подключение =====
+    frameCutter->input("signal").set(audio);
 
-    vector<float> spectrum;
+    vector<Real> frame, windowed, spec, specDB;
 
-    spec->input("frame").set(windowedFrame);
-    spec->output("spectrum").set(spectrum);
+    frameCutter->output("frame").set(frame);
 
-    spec->compute();
 
-    // 4. Сохраняем в Pool
-    Pool pool;
-    pool.set("spectrum", spectrum);
-    pool.set("metadata.sampleRate", targetSR);
+    Pool pool;  // сюда будем складывать спектрограмму
+
+
+    // ===== 4. Цикл по кадрам =====
+    while (true) {
+
+        frameCutter->compute();
+        if (frame.empty()) break;
+
+        windowing->input("frame").set(frame);
+        windowing->output("frame").set(windowed);
+        windowing->compute();
+
+        spectrum->input("frame").set(windowed);
+        spectrum->output("spectrum").set(spec);
+        spectrum->compute();
+
+        vector<Real> specDB(spec.size());
+
+        Real maxValue = 1e-10;  // защита от log(0)
+
+        // ищем максимум
+        for (size_t i = 0; i < spec.size(); ++i) {
+            if (spec[i] > maxValue) maxValue = spec[i];
+        }
+
+        // перевод в dB
+        for (size_t i = 0; i < spec.size(); ++i) {
+            specDB[i] = 20.0 * log10(spec[i] / maxValue + 1e-10);
+        }
+
+        // добавляем каждый кадр спектра
+        pool.add("spectrogram", specDB);
+    }
+
+
+    // ===== 5. Сохранение =====
+    pool.set("metadata.sampleRate", sampleRate);
     pool.set("metadata.frameSize", frameSize);
+    pool.set("metadata.hopSize", hopSize);
 
-    Algorithm* yamlOut = factory.create("YamlOutput", 
-                                        "filename", "spectrum.json", 
-                                        "format", "json");
-    yamlOut->input("pool").set(pool);
-    yamlOut->compute();
+    Algorithm* out = factory.create("YamlOutput",
+                                    "filename", "spectrogram.json",
+                                    "format", "json");
 
-    // Очистка
-    delete loader; delete win; delete spec; delete yamlOut;
+    out->input("pool").set(pool);
+    out->compute();
+
+
+    // ===== очистка =====
+    delete loader;
+    delete frameCutter;
+    delete windowing;
+    delete spectrum;
+    delete out;
+
     essentia::shutdown();
-
     return 0;
 }
