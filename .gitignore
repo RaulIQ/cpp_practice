@@ -31,6 +31,9 @@ Makefile
 # VSCode
 .vscode/
 
+venv/
+
+
 # Логи и временные файлы
 *.log
 *.tmp
