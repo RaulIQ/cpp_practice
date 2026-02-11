@@ -14,8 +14,9 @@ int main() {
     string filename = "audio.wav";
     float sampleRate = 44100.0;
 
-    int frameSize = 4096;   // как в librosa по умолчанию
-    int hopSize   = 256;    // как в librosa по умолчанию
+    int frameSize = 2048;
+    int hopSize   = 128;
+    const int numBands = 256;
 
     AlgorithmFactory& factory = AlgorithmFactory::instance();
 
@@ -40,10 +41,18 @@ int main() {
     Algorithm* spectrum = factory.create("Spectrum",
                                          "size", frameSize);
 
+    Algorithm *melBands = factory.create("MelBands",
+                                            "numberBands", numBands,
+                                            "sampleRate", sampleRate,
+                                            "lowFrequencyBound", 0,
+                                            "highFrequencyBound", sampleRate / 2.0f);
+
+    Algorithm *logOp = factory.create("UnaryOperator", "type", "log");
+
     // ===== 3. Подключение =====
     frameCutter->input("signal").set(audio);
 
-    vector<Real> frame, windowed, spec, specDB;
+    vector<Real> frame, windowed, spec, mel, logMel;
 
     frameCutter->output("frame").set(frame);
 
@@ -65,22 +74,16 @@ int main() {
         spectrum->output("spectrum").set(spec);
         spectrum->compute();
 
-        vector<Real> specDB(spec.size());
+        melBands->input("spectrum").set(spec);
+        melBands->output("bands").set(mel);
+        melBands->compute();
 
-        Real maxValue = 1e-10;  // защита от log(0)
-
-        // ищем максимум
-        for (size_t i = 0; i < spec.size(); ++i) {
-            if (spec[i] > maxValue) maxValue = spec[i];
-        }
-
-        // перевод в dB
-        for (size_t i = 0; i < spec.size(); ++i) {
-            specDB[i] = 20.0 * log10(spec[i] / maxValue + 1e-10);
-        }
+        logOp->input("array").set(mel);
+        logOp->output("array").set(logMel);
+        logOp->compute();
 
         // добавляем каждый кадр спектра
-        pool.add("spectrogram", specDB);
+        pool.add("logMel", logMel);
     }
 
 
@@ -88,6 +91,8 @@ int main() {
     pool.set("metadata.sampleRate", sampleRate);
     pool.set("metadata.frameSize", frameSize);
     pool.set("metadata.hopSize", hopSize);
+    pool.set("metadata.numBands", numBands);
+
 
     Algorithm* out = factory.create("YamlOutput",
                                     "filename", "spectrogram.json",

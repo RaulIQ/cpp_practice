@@ -1,27 +1,37 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import librosa.display
 
-with open("spectrogram.json") as f:
+# 1. Загрузка данных
+with open("spectrogram.json", "r") as f:
     data = json.load(f)
 
-S = np.array(data["spectrogram"])  # shape (num_frames, num_bins)
+# Внимание: в C++ ты сохранил ключ "logMel" (pool.add("logMel", ...))
+# а не "spectrogram"
+S = np.array(data["logMel"])  
 
-# Получаем метаданные
-frameSize = 4096
-hopSize   = 256
-sampleRate = 44100
+# S имеет форму (Time, MelBands). Для графика нужно (MelBands, Time)
+S = S.T 
 
-num_frames, num_bins = S.shape
-
-# Оси в реальных единицах
-times = np.arange(num_frames) * hopSize / sampleRate  # в секундах
-freqs = np.arange(num_bins) * sampleRate / frameSize  # в Гц
+sr = data.get("metadata.sampleRate", 44100)
+hop_length    = data.get("metadata.hopSize", 256)
+n_mels = data.get("metadata.numBands", 80)
 
 plt.figure(figsize=(12, 6))
-plt.imshow(S.T, origin="lower", aspect="auto",
-           extent=[times[0], times[-1], freqs[0], freqs[-1]])
-plt.xlabel("Time (s)")
-plt.ylabel("Frequency (Hz)")
-plt.colorbar(label="Amplitude (dB)")
+
+# 2. Отрисовка
+# y_axis='mel' заставляет librosa нарисовать правильную логарифмическую линейку частот
+# fmax=sr/2 важно, чтобы верхняя граница соответствовала настройкам MelBands в C++
+librosa.display.specshow(S, 
+                         sr=sr, 
+                         hop_length=hop_length, 
+                         x_axis='time', 
+                         y_axis='mel', 
+                         fmax=sr/2,
+                         cmap='viridis') # или 'magma', 'inferno'
+
+plt.colorbar(format='%+2.0f dB')
+plt.title('Essentia Mel Spectrogram')
+plt.tight_layout()
 plt.show()
