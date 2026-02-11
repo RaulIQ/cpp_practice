@@ -15,62 +15,77 @@ int main()
     essentia::init();
 
     const string filename = "audio.wav";
-    const float targetSR = 4000.0f;
+
+    float targetSR = 44100.0;
 
     AlgorithmFactory &factory = AlgorithmFactory::instance();
 
-    // === Исправленная часть ===
-    Algorithm *mdReader = factory.create("MetadataReader", "filename", filename);
-
-    // Все выходы MetadataReader
-    int sampleRate_f = 0.0;
-    int channels = 0;
-    std::string title, artist, album, comment, genre, tracknumber, date;
-    int duration = 0;
-    int bitrate = 0;
-
-    Pool tagPool; // ← ОБЯЗАТЕЛЬНО объявляем!
-
-    // Подключаем ВСЁ
-    mdReader->output("sampleRate").set(sampleRate_f);
-    mdReader->output("channels").set(channels);
-    mdReader->output("title").set(title);
-    mdReader->output("artist").set(artist);
-    mdReader->output("album").set(album);
-    mdReader->output("comment").set(comment);
-    mdReader->output("genre").set(genre);
-    mdReader->output("tracknumber").set(tracknumber);
-    mdReader->output("date").set(date);
-    mdReader->output("duration").set(duration);
-    mdReader->output("bitrate").set(bitrate);
-    mdReader->output("tagPool").set(tagPool); // ← вот эта строка была проблемой
-
-    mdReader->compute();
-
-    int originalSR = static_cast<int>(sampleRate_f);
-
-    println("File Info: {} Hz, {} channels", originalSR, channels);
-
-    // MonoLoader на оригинальной частоте
     Algorithm *loader = factory.create("MonoLoader",
                                        "filename", filename,
-                                       "sampleRate", originalSR);
+                                       "sampleRate", targetSR);
 
-    vector<float> rawAudio;
-    loader->output("audio").set(rawAudio);
+    std::vector<float> audio;
+    loader->output("audio").set(audio);
     loader->compute();
 
-    // Ресемплинг
-    Algorithm *resampler = factory.create("Resample",
-                                          "inputSampleRate", originalSR,
-                                          "outputSampleRate", targetSR);
+    const int frameSize = 1024;
+    const int hopSize = 512;
+    const int numBands = 80;
 
-    vector<float> resampledAudio;
-    resampler->input("signal").set(rawAudio);
-    resampler->output("signal").set(resampledAudio);
-    resampler->compute();
+    Algorithm *frameCutter = factory.create("FrameCutter", "frameSize", frameSize, "hopSize", hopSize);
+    Algorithm *windowing = factory.create("Windowing", "type", "hann");
+    Algorithm *spectrum = factory.create("Spectrum");
+    Algorithm *melBands = factory.create("MelBands",
+                                         "numberBands", numBands,
+                                         "sampleRate", targetSR,
+                                         "lowFrequencyBound", 0,
+                                         "highFrequencyBound", targetSR / 2.0f);
 
-    println("Resampling done: {} -> {} samples", rawAudio.size(), resampledAudio.size());
+    Algorithm *logOp = factory.create("UnaryOperator", "type", "log");
+
+    std::vector<float> frame, windowed, spec, mel, logMel;
+    Pool pool;
+
+    frameCutter->input("signal").set(audio);
+    frameCutter->output("frame").set(frame);
+
+    windowing->input("frame").set(frame);
+    windowing->output("frame").set(windowed);
+
+    spectrum->input("frame").set(windowed);
+    spectrum->output("spectrum").set(spec);
+
+    melBands->input("spectrum").set(spec);
+    melBands->output("bands").set(mel);
+
+    logOp->input("array").set(mel);
+    logOp->output("array").set(logMel);
+
+    while (true)
+    {
+        frameCutter->compute();
+        if (frame.empty())
+            break;
+
+        windowing->compute();
+        spectrum->compute();
+        melBands->compute();
+        logOp->compute();
+
+        pool.add("logMel", logMel); // добавляем каждый фрейм
+    }
+
+    // Сохраняем в JSON
+    Algorithm *yamlOut = factory.create("YamlOutput",
+                                        "filename", "logmel_44100.json",
+                                        "format", "json"); // важно: "json"
+
+    yamlOut->input("pool").set(pool);
+    yamlOut->compute();
+
+    std::cout << "Сохранено: " << "logmel_44100.json"
+              << " | SR = " << targetSR
+              << " Гц | Фреймов: " << pool.value<std::vector<std::vector<float>>>("logMel").size() << "\n";
 
     // PortAudio
     Pa_Initialize();
@@ -86,17 +101,22 @@ int main()
     }
 
     Pa_StartStream(stream);
-    println("Playing {} seconds...", static_cast<float>(resampledAudio.size()) / targetSR);
+    println("Playing {} seconds...", static_cast<float>(audio.size()) / targetSR);
 
-    Pa_WriteStream(stream, resampledAudio.data(), resampledAudio.size());
+    Pa_WriteStream(stream, audio.data(), audio.size());
 
     Pa_StopStream(stream);
     Pa_CloseStream(stream);
     Pa_Terminate();
 
-    delete mdReader;
     delete loader;
-    delete resampler;
+    delete frameCutter;
+    delete windowing;
+    delete spectrum;
+    delete melBands;
+    delete logOp;
+    delete yamlOut;
+
     essentia::shutdown();
 
     return 0;
