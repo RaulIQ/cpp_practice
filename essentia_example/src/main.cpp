@@ -1,122 +1,67 @@
-#include <print>
-#include <vector>
-#include <iostream>
 #include <essentia/essentia.h>
 #include <essentia/algorithmfactory.h>
 #include <essentia/pool.h>
-#include <portaudio.h>
+#include <vector>
+#include <string>
 
 using namespace std;
 using namespace essentia;
 using namespace essentia::standard;
 
-int main()
-{
+int main() {
     essentia::init();
 
-    const string filename = "audio.wav";
+    string filename = "audio.wav";
+    float targetSR = 44100.0; // Возьмем стандартную частоту для спектра
+    int frameSize = 4096;
 
-    float targetSR = 44100.0;
+    AlgorithmFactory& factory = AlgorithmFactory::instance();
 
-    AlgorithmFactory &factory = AlgorithmFactory::instance();
-
-    Algorithm *loader = factory.create("MonoLoader",
-                                       "filename", filename,
-                                       "sampleRate", targetSR);
-
-    std::vector<float> audio;
+    // 1. Загрузка аудио
+    Algorithm* loader = factory.create("MonoLoader", "filename", filename, "sampleRate", targetSR);
+    vector<float> audio;
     loader->output("audio").set(audio);
     loader->compute();
 
-    const int frameSize = 1024;
-    const int hopSize = 512;
-    const int numBands = 80;
+    // 2. Берем только первые 4096 сэмплов (как в вашем примере dft_input = array[:4096])
+    vector<float> frame;
+    frame.assign(audio.begin(), audio.begin() + frameSize);
 
-    Algorithm *frameCutter = factory.create("FrameCutter", "frameSize", frameSize, "hopSize", hopSize);
-    Algorithm *windowing = factory.create("Windowing", "type", "hann");
-    Algorithm *spectrum = factory.create("Spectrum");
-    Algorithm *melBands = factory.create("MelBands",
-                                         "numberBands", numBands,
-                                         "sampleRate", targetSR,
-                                         "lowFrequencyBound", 0,
-                                         "highFrequencyBound", targetSR / 2.0f);
+    // ===== 1. Окно Хэннинга =====
+    Algorithm* win = factory.create("Windowing", 
+                                    "type", "hann",
+                                    "size", frameSize);
 
-    Algorithm *logOp = factory.create("UnaryOperator", "type", "log");
+    vector<float> windowedFrame;
+    win->input("frame").set(frame);
+    win->output("frame").set(windowedFrame);
+    win->compute();
 
-    std::vector<float> frame, windowed, spec, mel, logMel;
+    // ===== 2. FFT =====
+
+    Algorithm* spec = factory.create("Spectrum", "size", frameSize);
+
+    vector<float> spectrum;
+
+    spec->input("frame").set(windowedFrame);
+    spec->output("spectrum").set(spectrum);
+
+    spec->compute();
+
+    // 4. Сохраняем в Pool
     Pool pool;
+    pool.set("spectrum", spectrum);
+    pool.set("metadata.sampleRate", targetSR);
+    pool.set("metadata.frameSize", frameSize);
 
-    frameCutter->input("signal").set(audio);
-    frameCutter->output("frame").set(frame);
-
-    windowing->input("frame").set(frame);
-    windowing->output("frame").set(windowed);
-
-    spectrum->input("frame").set(windowed);
-    spectrum->output("spectrum").set(spec);
-
-    melBands->input("spectrum").set(spec);
-    melBands->output("bands").set(mel);
-
-    logOp->input("array").set(mel);
-    logOp->output("array").set(logMel);
-
-    while (true)
-    {
-        frameCutter->compute();
-        if (frame.empty())
-            break;
-
-        windowing->compute();
-        spectrum->compute();
-        melBands->compute();
-        logOp->compute();
-
-        pool.add("logMel", logMel); // добавляем каждый фрейм
-    }
-
-    // Сохраняем в JSON
-    Algorithm *yamlOut = factory.create("YamlOutput",
-                                        "filename", "logmel_44100.json",
-                                        "format", "json"); // важно: "json"
-
+    Algorithm* yamlOut = factory.create("YamlOutput", 
+                                        "filename", "spectrum.json", 
+                                        "format", "json");
     yamlOut->input("pool").set(pool);
     yamlOut->compute();
 
-    std::cout << "Сохранено: " << "logmel_44100.json"
-              << " | SR = " << targetSR
-              << " Гц | Фреймов: " << pool.value<std::vector<std::vector<float>>>("logMel").size() << "\n";
-
-    // PortAudio
-    Pa_Initialize();
-    PaStream *stream = nullptr;
-
-    PaError err = Pa_OpenDefaultStream(&stream, 0, 1, paFloat32, targetSR,
-                                       paFramesPerBufferUnspecified, nullptr, nullptr);
-
-    if (err != paNoError)
-    {
-        println("PA Error: {}", Pa_GetErrorText(err));
-        return 1;
-    }
-
-    Pa_StartStream(stream);
-    println("Playing {} seconds...", static_cast<float>(audio.size()) / targetSR);
-
-    Pa_WriteStream(stream, audio.data(), audio.size());
-
-    Pa_StopStream(stream);
-    Pa_CloseStream(stream);
-    Pa_Terminate();
-
-    delete loader;
-    delete frameCutter;
-    delete windowing;
-    delete spectrum;
-    delete melBands;
-    delete logOp;
-    delete yamlOut;
-
+    // Очистка
+    delete loader; delete win; delete spec; delete yamlOut;
     essentia::shutdown();
 
     return 0;
