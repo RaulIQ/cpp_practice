@@ -1,4 +1,5 @@
 import json
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import librosa.display
@@ -14,9 +15,14 @@ S = np.array(data["logMel"])
 # S имеет форму (Time, MelBands). Для графика нужно (MelBands, Time)
 S = S.T 
 
-sr = data.get("metadata.sampleRate", 44100)
-hop_length    = data.get("metadata.hopSize", 256)
-n_mels = data.get("metadata.numBands", 80)
+metadata = data["metadata"]
+
+sr = metadata.get("sampleRate", 0)
+hop_length = metadata.get("hopSize", 0)
+n_mels = metadata.get("numBands", 0)
+
+print(sr, hop_length, n_mels)
+
 
 plt.figure(figsize=(12, 6))
 
