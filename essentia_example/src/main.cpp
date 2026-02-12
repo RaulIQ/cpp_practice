@@ -12,12 +12,12 @@ int main()
 {
     essentia::init();
 
-    string filename = "audio.wav";
+    string filename = "voice.wav";
     float sampleRate = 44100.0;
 
     int frameSize = 2048;
-    int hopSize = 256;
-    const int numBands = 128;
+    int hopSize = 40;
+    const int numBands = 256;
 
     AlgorithmFactory &factory = AlgorithmFactory::instance();
 
@@ -38,13 +38,13 @@ int main()
     Algorithm *windowing = factory.create("Windowing",
                                           "type", "hann");
 
-    Algorithm *spectrum = factory.create("PowerSpectrum",
+    Algorithm *spectrum = factory.create("Spectrum",
                                          "size", frameSize);
 
     Algorithm *melBands = factory.create("MelBands",
                                          "numberBands", numBands,
                                          "sampleRate", sampleRate,
-                                         "lowFrequencyBound", 0,
+                                         "lowFrequencyBound", 40,
                                          "highFrequencyBound", sampleRate / 2.0f);
 
     Algorithm *lin2db = factory.create("UnaryOperator",
@@ -71,8 +71,8 @@ int main()
         windowing->output("frame").set(windowed);
         windowing->compute();
 
-        spectrum->input("signal").set(windowed);
-        spectrum->output("powerSpectrum").set(spec);
+        spectrum->input("frame").set(windowed);
+        spectrum->output("spectrum").set(spec);
         spectrum->compute();
 
         melBands->input("spectrum").set(spec);
