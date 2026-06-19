@@ -1,0 +1,39 @@
+---
+description: Code style, objects, and methods standards
+alwaysApply: true
+---
+
+# Code
+
+Favor aesthetics over functionality.
+Skip inline comments.
+Prepend classes with plain-text docblocks explaining purpose, not usage.
+Name variables as single nouns.
+Inline single-use expressions, dropping unnecessary local variables.
+Name methods as single nouns or verbs, separating commands from queries.
+Pack method bodies without blank lines.
+
+## Style
+
+Keep error and log messages to one sentence with context.
+Strip trailing periods from messages.
+Follow "Paired Brackets" and "Monotonic Indentation".
+
+## Objects
+
+Honor Elegant Objects and SOLID (single, open, Liskov, interface, dependency).
+Follow DDD (domain-driven design) and YAGNI (you arent gonna need it).
+Apply SRP (single-responsibility) and DRY (dont repeat yourself).
+Favor failing immediately over failing silently.
+Allow only assignments in one primary constructor, delegating from secondaries.
+Compose objects instead of inheriting implementation.
+Reject -er names and utility classes.
+Make every class final, holding one to four attributes.
+
+## Methods
+
+Build only immutable objects, freezing attributes after assignment.
+Drop static methods, public static literals, setters, and getters.
+Declare methods in interfaces first, exposing nothing public outside them.
+Reject null returns and arguments.
+Skip type introspection, casting, and reflection.

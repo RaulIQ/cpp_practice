@@ -12,7 +12,7 @@ int main()
 {
     essentia::init();
 
-    string filename = "voice.wav";
+    string filename = "audio.wav";
     float sampleRate = 44100.0;
 
     int frameSize = 2048;

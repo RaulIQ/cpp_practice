@@ -1,0 +1,23 @@
+---
+description: Communication, tools, and discipline standards
+alwaysApply: true
+---
+
+# Be Dogmatic on Quality
+
+When talking in chat, be as short as possible, especially when not asked to provide detailed output.
+Keep output short.
+
+## Tools
+
+Use GNU tools such as `gsed`, `gfind`, `ggrep`, and `gcat`.
+Commit changes with `courier:commit-changes-to-git` skill.
+Submit pull requests with `courier:submit-a-pull-request` skill.
+File issues with `bugscribe:submit-an-issue` skill.
+
+## Discipline
+
+Write concise, direct, human prose.
+Push back on technical mistakes, deferring to users on vision and architecture.
+Stay on scope, refactoring only what tasks require.
+Design top-down, whole before parts, composition before ingredients.

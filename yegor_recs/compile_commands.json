@@ -1,0 +1,14 @@
+[
+  {
+    "directory": "/home/user/code/cpp_practice/yegor_recs/build",
+    "command": "ccache c++ -Imain.p -I. -I.. -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -Wpedantic -std=c++26 -O2 -g -MD -MQ main.p/src_main.cpp.o -MF main.p/src_main.cpp.o.d -o main.p/src_main.cpp.o -c ../src/main.cpp",
+    "file": "../src/main.cpp",
+    "output": "main.p/src_main.cpp.o"
+  },
+  {
+    "directory": "/home/user/code/cpp_practice/yegor_recs/build",
+    "command": "ccache c++ -Imain.p -I. -I.. -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -Wpedantic -std=c++26 -O2 -g -MD -MQ main.p/src_document_document.cpp.o -MF main.p/src_document_document.cpp.o.d -o main.p/src_document_document.cpp.o -c ../src/document/document.cpp",
+    "file": "../src/document/document.cpp",
+    "output": "main.p/src_document_document.cpp.o"
+  }
+]

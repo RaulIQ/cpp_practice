@@ -1,0 +1,31 @@
+---
+description: Testing, fixtures, and runtime standards
+alwaysApply: true
+---
+
+# Tests
+
+Follow "Angry Tests".
+Place one assertion per test, as its last statement.
+Phrase each failure message negatively.
+Keep tests short, verifying one behavior with one statement.
+Map test files one-to-one with feature files, naming tests as sentences.
+Spell "cannot" and "dont" without apostrophes.
+Isolate tests from shared attributes, setUp, tearDown, constants, and cleanup.
+
+## Fixtures
+
+Provide custom arguments to tested objects, not defaults.
+Skip irrelevant code, side effects, accessors, constructors, and errors.
+Favor fakes and stubs over mocks.
+Use Hamcrest matchers with irregular, random inputs.
+Inline brief fixtures, generating bulky ones at runtime.
+Create fixture objects against duplication, using temporary directories.
+Keep filesystem, sockets, and memory unmocked.
+
+## Runtime
+
+Disable logging in tests.
+Bound every wait with timeouts.
+Test concurrency, retrying flaky blocks.
+Assume no Internet, using ephemeral ports.

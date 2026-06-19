@@ -1,0 +1,20 @@
+---
+description: Workflow and change management standards
+alwaysApply: true
+---
+
+# Workflow
+
+Pull from Git before making changes.
+Name each branch after its GitHub issue integer, asking when unsure.
+Always practice TDD (test-driven development), reproducing bugs before fixing.
+Invest in unit tests until bugs reproduce, trusting intuition over debugging.
+Log extensively when problems stay hard.
+
+## Changes
+
+Tolerate upstream bugs, suggesting issues and waiting for fixes.
+Keep changes focused and minimal.
+Leave puzzles for later, following Puzzle Driven Development.
+Flag smells and refactoring, suggesting issues rather than fixing silently.
+Fix style violations in code, trusting checkers rather than suppressing them.
